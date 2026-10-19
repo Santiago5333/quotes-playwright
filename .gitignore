@@ -1,0 +1,11 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Caches
+.pytest_cache/
+.mypy_cache/
+
+# Producto del scraper (completar cuando exista data/: decidir qué se publica)
+data/
