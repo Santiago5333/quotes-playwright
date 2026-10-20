@@ -1,4 +1,5 @@
 import json
+import re
 from urllib.parse import urljoin
 
 from playwright.sync_api import Error as PlaywrightError
@@ -6,6 +7,8 @@ from playwright.sync_api import Locator, Page
 
 from src import config
 from src.models import Author, Quote
+
+_DATE_RE = re.compile(r"var\s+data\s*=\s*")
 
 
 def parse_quote(
@@ -18,8 +21,15 @@ def parse_quote(
     author = card.locator(config.SEL_AUTHOR).inner_text().strip()
     tags = [t.strip() for t in card.locator(config.SEL_TAG).all_inner_texts()]
 
-    href = card.locator(config.SEL_AUTHOR_LINK).first.get_attribute("href")
-    author_url = urljoin(config.BASE_URL, href) if href else None
+    # En /js/ el autor no es link: no hay href que seguir. Si no hay
+    # selector de enlace, author_url queda None (se rellena con el slug en
+    # los modos inline/raw).
+    link = card.locator(config.SEL_AUTHOR_LINK)
+    author_url = None
+    if link.count():
+        href = link.first.get_attribute("href")
+        if href:
+            author_url = urljoin(config.BASE_URL, href)
 
     return Quote(text=text, author=author, tags=tags, author_url=author_url)
 
@@ -80,3 +90,7 @@ def parse_raw(html: str) -> list[Quote]:
     inicio = html.index(marca) + len(marca)
     items, _ = json.JSONDecoder().raw_decode(html[inicio:])
     return [quote_from_item(i) for i in items]
+
+
+def has_next_raw(html: str) -> bool:
+    return 'class="next"' in html
